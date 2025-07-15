@@ -33,13 +33,11 @@ const Chat: React.FC<ChatProps> = ({ fontsLoaded = true, onNavigateToShare }) =>
 
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Animation values
   const headerAnimation = useRef(new Animated.Value(0)).current;
   const messageAnimations = useRef<{ [key: number]: Animated.Value }>({}).current;
   const inputAnimation = useRef(new Animated.Value(0)).current;
   const typingAnimation = useRef(new Animated.Value(0)).current;
 
-  // Initial chat messages - easy to modify
   const initialMessages: Message[] = [
     {
       id: 1,
@@ -51,8 +49,6 @@ const Chat: React.FC<ChatProps> = ({ fontsLoaded = true, onNavigateToShare }) =>
 
   const [messages, setMessages] = useState<Message[]>(initialMessages);
 
-
-  // Initialize animations for existing messages
   useEffect(() => {
     messages.forEach((msg) => {
       if (!messageAnimations[msg.id]) {
@@ -61,7 +57,6 @@ const Chat: React.FC<ChatProps> = ({ fontsLoaded = true, onNavigateToShare }) =>
     });
   }, [messages]);
 
-  // Header entrance animation
   useEffect(() => {
     Animated.timing(headerAnimation, {
       toValue: 1,
@@ -70,7 +65,7 @@ const Chat: React.FC<ChatProps> = ({ fontsLoaded = true, onNavigateToShare }) =>
       useNativeDriver: true,
     }).start();
 
-    // Animate messages with staggered delay
+
     messages.forEach((msg, index) => {
       if (!messageAnimations[msg.id]) {
         messageAnimations[msg.id] = new Animated.Value(0);
@@ -85,7 +80,7 @@ const Chat: React.FC<ChatProps> = ({ fontsLoaded = true, onNavigateToShare }) =>
       }).start();
     });
 
-    // Input animation
+   
     Animated.timing(inputAnimation, {
       toValue: 1,
       duration: 600,
@@ -96,7 +91,7 @@ const Chat: React.FC<ChatProps> = ({ fontsLoaded = true, onNavigateToShare }) =>
   }, []);
 
 
-  // Typing indicator animation
+ 
   useEffect(() => {
     if (isTyping) {
       const animate = () => {
@@ -127,7 +122,7 @@ const Chat: React.FC<ChatProps> = ({ fontsLoaded = true, onNavigateToShare }) =>
       const filtered = stored.filter((msg) => msg.role !== 'system');
 
       const formatted: Message[] = filtered.map((msg, index) => ({
-        id: index + 2, // +2 because id:1 is reserved for initialMessage
+        id: index + 2,
         text: msg.content,
         isBot: msg.role === 'assistant',
         timestamp: new Date(),
@@ -160,13 +155,11 @@ const Chat: React.FC<ChatProps> = ({ fontsLoaded = true, onNavigateToShare }) =>
 
       const tempMessage = message;
 
-      // Initialize animation for new message
       messageAnimations[newMessage.id] = new Animated.Value(0);
 
       setMessages([...messages, newMessage]);
       setMessage('');
 
-      // Animate new message
       Animated.timing(messageAnimations[newMessage.id], {
         toValue: 1,
         duration: 400,
@@ -174,12 +167,12 @@ const Chat: React.FC<ChatProps> = ({ fontsLoaded = true, onNavigateToShare }) =>
         useNativeDriver: true,
       }).start();
 
-      // Simulate bot typing
+    
       setIsTyping(true);
       const res = await AIAssistant(message);
       setTimeout(() => {
         setIsTyping(false);
-        // Add bot response (optional)
+      
         const botResponse: Message = {
           id: messages.length + 2,
           text: res,
@@ -424,7 +417,7 @@ const TypingIndicator = () => (
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 90} // Adjusted for header height
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 90} 
       >
         {/* Chat Messages */}
         <ScrollView
@@ -498,7 +491,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#FFFFFF',
-    paddingTop: 40, // Reduced from 60px
+    paddingTop: 40, 
     paddingBottom: 20,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
