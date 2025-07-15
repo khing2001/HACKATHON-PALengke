@@ -54,7 +54,47 @@ const Analytics: React.FC<AnalyticsProps> = ({ onBack }) => {
   const TOTAL_PROFIT = `+P${stats.totalProfit.toFixed(2)}`;
   const PROFIT_LABEL = '📈 Total Profit';
   const PROFIT_DATE = 'As of July 15, 2025';
-  
+
+  const headerAnimation = useRef(new Animated.Value(0)).current;
+  const titleAnimation = useRef(new Animated.Value(0)).current;
+  const earningsAnimation = useRef(new Animated.Value(0)).current;
+  const statsAnimation = useRef(new Animated.Value(0)).current;
+  const profitAnimation = useRef(new Animated.Value(0)).current;
+  const downloadAnimation = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animations = [
+      { animation: headerAnimation, delay: 0 },
+      { animation: titleAnimation, delay: 100 },
+      { animation: earningsAnimation, delay: 200 },
+      { animation: statsAnimation, delay: 300 },
+      { animation: profitAnimation, delay: 400 },
+      { animation: downloadAnimation, delay: 500 },
+    ];
+
+    animations.forEach(({ animation, delay }) => {
+      Animated.timing(animation, {
+        toValue: 1,
+        duration: 600,
+        delay,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    });
+  }, []);
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (onBack) {
+        onBack();
+        return true; 
+      }
+      return false; 
+    });
+
+    return () => backHandler.remove();
+  }, [onBack]);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.innerWrapper}>

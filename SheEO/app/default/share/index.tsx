@@ -14,18 +14,6 @@ interface SharePageProps {
 
 const SharePage: React.FC<SharePageProps> = ({ fontsLoaded = true, onBack }) => {
   const [isRegenerating, setIsRegenerating] = useState(false);
-//   const [content, setContent] = useState(`🛒 Visit Nanay Rita's Store!
-//
-// Fresh vegetables, fruits, and daily essentials at unbeatable prices!
-//
-// 🥬 Fresh Vegetables: ₱20-50
-// 🍎 Seasonal Fruits: ₱30-80
-// 🥛 Daily Essentials: ₱15-100
-//
-// 📍 Located at: Barangay San Jose, Batangas City
-// ⏰ Open: 6:00 AM - 8:00 PM daily
-//
-// Come visit us for quality products and friendly service! 🌟`);
   const [content, setContent] = useState('')
   const [isEditing, setIsEditing] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -38,14 +26,12 @@ const SharePage: React.FC<SharePageProps> = ({ fontsLoaded = true, onBack }) => 
 
     fetch();
   }, [])
-  // Animation refs
   const headerAnimation = useRef(new Animated.Value(0)).current;
   const contentAnimation = useRef(new Animated.Value(0)).current;
   const buttonAnimation = useRef(new Animated.Value(0)).current;
   const regenerateAnimation = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Stagger animations for smooth entrance
     const animations = [
       { animation: headerAnimation, delay: 0 },
       { animation: contentAnimation, delay: 200 },
@@ -64,13 +50,12 @@ const SharePage: React.FC<SharePageProps> = ({ fontsLoaded = true, onBack }) => 
   }, []);
 
   useEffect(() => {
-    // Handle Android back button
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
       if (onBack) {
         onBack();
-        return true; // Prevent default behavior
+        return true; 
       }
-      return false; // Allow default behavior
+      return false; 
     });
 
     return () => backHandler.remove();
@@ -82,7 +67,6 @@ const SharePage: React.FC<SharePageProps> = ({ fontsLoaded = true, onBack }) => 
     try{
     const newShare = await ShareStoreAI({storeName: 'Nanay Rita', location: 'Lahug'})
 
-    // Animate regenerate button
     Animated.sequence([
       Animated.timing(regenerateAnimation, {
         toValue: 0.8,
@@ -110,7 +94,6 @@ const SharePage: React.FC<SharePageProps> = ({ fontsLoaded = true, onBack }) => 
     try {
       setIsSharing(true);
 
-      // Validate content
       if (!content || content.trim().length === 0) {
         Alert.alert('Error', 'Please add some content to share');
         return;
@@ -118,22 +101,17 @@ const SharePage: React.FC<SharePageProps> = ({ fontsLoaded = true, onBack }) => 
 
       const shareOptions = {
         message: content,
-        // Remove url property to prevent link conversion
         ...(Platform.OS === 'ios' && { title: 'Share Store' })
       };
 
       const result = await Share.share(shareOptions);
 
       if (result.action === Share.sharedAction) {
-        // Optional: Show success message
-        // Alert.alert('Success', 'Content shared successfully!');
       } else if (result.action === Share.dismissedAction) {
-        // console.log('Share dismissed');
       }
     } catch (error) {
       console.error('Share error:', error);
-
-      // Fallback to clipboard
+      
       try {
         Clipboard.setString(content);
         Alert.alert(
