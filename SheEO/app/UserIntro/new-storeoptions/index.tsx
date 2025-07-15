@@ -34,7 +34,6 @@ export default function NewStoreOptions({ fontsLoaded = true }: NewStoreOptionsP
   const [touched, setTouched] = useState<{storeName: boolean, budget: boolean, location: boolean, store: boolean}>({storeName: false, budget: false, location: false, store: false});
   const router = useRouter();
 
-  // Animation refs
   const titleAnimation = useRef(new Animated.Value(0)).current;
   const formAnimation = useRef(new Animated.Value(0)).current;
   const storeOptionsAnimation = useRef(new Animated.Value(0)).current;
@@ -42,7 +41,6 @@ export default function NewStoreOptions({ fontsLoaded = true }: NewStoreOptionsP
   const buttonAnimation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Stagger animations for smooth entrance
     const animations = [
       { animation: titleAnimation, delay: 0 },
       { animation: formAnimation, delay: 200 },
@@ -78,7 +76,7 @@ export default function NewStoreOptions({ fontsLoaded = true }: NewStoreOptionsP
     if (!isFormValid) return;
     const sellerInfo: SellerInfo = {
       storeName,
-      storeType: selectedStore!, // non-null because of form validation
+      storeType: selectedStore!, 
       location,
       capital: parseFloat(budget),
     };
@@ -102,7 +100,6 @@ export default function NewStoreOptions({ fontsLoaded = true }: NewStoreOptionsP
 
   const renderStore = ({ item, index }: { item: typeof storeOptions[0], index: number }) => {
     const isSelected = selectedStore === item.name;
-    // For 3 columns: remove marginRight for last item in each row
     const isLastInRow = (index + 1) % 3 === 0;
     return (
       <TouchableOpacity
@@ -241,7 +238,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
     flex: 1,
     paddingTop: 60,
-    paddingBottom: 100, // Slightly less space for confirm button
+    paddingBottom: 100,
     paddingHorizontal: 20,
     overflow: 'visible',
   },
@@ -287,10 +284,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'flex-start',
     overflow: 'visible',
-    // Remove width to let container padding control the edge
   },
   optionsWrapper: {
-    // Remove width to let container padding control the edge
     alignItems: 'flex-start',
     justifyContent: 'flex-start',
     marginBottom: 0,
