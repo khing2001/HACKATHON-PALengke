@@ -35,7 +35,6 @@ const Analytics: React.FC<AnalyticsProps> = ({ onBack }) => {
   const [profitTab, setProfitTab] = useState<'today' | 'weekly'>('today');
   const router = useRouter();
 
-  // Animation refs for smooth entrance
   const headerAnimation = useRef(new Animated.Value(0)).current;
   const titleAnimation = useRef(new Animated.Value(0)).current;
   const earningsAnimation = useRef(new Animated.Value(0)).current;
@@ -44,7 +43,6 @@ const Analytics: React.FC<AnalyticsProps> = ({ onBack }) => {
   const downloadAnimation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Staggered entrance animations
     const animations = [
       { animation: headerAnimation, delay: 0 },
       { animation: titleAnimation, delay: 100 },
@@ -66,13 +64,12 @@ const Analytics: React.FC<AnalyticsProps> = ({ onBack }) => {
   }, []);
 
   useEffect(() => {
-    // Handle Android back button
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
       if (onBack) {
         onBack();
-        return true; // Prevent default behavior
+        return true; 
       }
-      return false; // Allow default behavior
+      return false; 
     });
 
     return () => backHandler.remove();
