@@ -14,7 +14,6 @@ export default function NewSuggestions() {
   const router = useRouter();
   const [fontsLoaded, setFontsLoaded] = useState(false);
   
-  // Animation refs
   const headerAnimation = useRef(new Animated.Value(0)).current;
   const contentAnimation = useRef(new Animated.Value(0)).current;
   const bottomAnimation = useRef(new Animated.Value(0)).current;
@@ -26,7 +25,6 @@ export default function NewSuggestions() {
     };
     loadAppFonts();
 
-    // Stagger animations for smooth entrance
     Animated.stagger(200, [
       Animated.timing(headerAnimation, {
         toValue: 1,
@@ -55,7 +53,6 @@ export default function NewSuggestions() {
     });
   }, []);
 
-  // AI-replaceable data structures
   const productSuggestions = [
     {
       id: 1,
@@ -86,7 +83,6 @@ export default function NewSuggestions() {
     },
   ];
 
-  // AI-replaceable budget allocation
   const budgetAllocation = {
     totalBudget: parseInt(budget as string) || 5000,
     categories: [
@@ -117,7 +113,6 @@ export default function NewSuggestions() {
     ]
   };
 
-  // AI-replaceable business strategies
   const businessStrategies = [
     {
       id: 1,
@@ -522,7 +517,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100, // Space for fixed bottom buttons
+    paddingBottom: 100, 
   },
   sectionContainer: {
     marginTop: 20,
@@ -724,7 +719,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FFFFFF',
   },
-  // Strategy Section Styles
+
   strategyCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
