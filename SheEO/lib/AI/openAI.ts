@@ -1,8 +1,6 @@
 import axios from 'axios';
-// import { OPENAI_API_KEY } from '@env';
+import { OPENAI_API_KEY } from '@env';
 import { ChatMessage } from '../aiStorage';
-
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 export interface OpenAIPayload{
   messages: ChatMessage[],
@@ -20,7 +18,7 @@ export const OpenAI  = async({messages, model}: OpenAIPayload) => {
       },
       {
         headers: {
-          Authorization: `Bearer OPENAI_API_KEY`,
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
           'Content-Type': 'application/json',
         },
       }

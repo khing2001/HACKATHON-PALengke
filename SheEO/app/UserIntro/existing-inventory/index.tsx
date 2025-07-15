@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, Dimensions, TextInput, Platform, Animated, Easing, LayoutAnimation, UIManager } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { useRouter, useNavigation } from 'expo-router';
-import { loadFonts, getFontFamily } from '../../../components/FontConfig';
+import { useRouter } from 'expo-router';
+import { loadFonts, getFontFamily } from '../../components/FontConfig';
+import { addProduct, sellProduct, restockProduct, getProducts } from '../../lib/inventory';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 if (Platform.OS === 'android') {
@@ -35,12 +36,11 @@ const initialProducts: Product[] = [
     pcs: 100,
     cost: 10,
     price: 12,
-    image: require('../../../assets/png/fishball.png'),
+    image: require('../../assets/png/fishball.png'),
   },
 ];
 
 export default function ExistingInventoryScreen() {
-  const  navigation = useNavigation();
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [editingProduct, setEditingProduct] = useState<null | (Product & { pcsStr: string; costStr: string; priceStr: string })>(null);
@@ -50,13 +50,31 @@ export default function ExistingInventoryScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
+  // Animation refs
   const headerAnimation = useRef(new Animated.Value(0)).current;
   const contentAnimation = useRef(new Animated.Value(0)).current;
   const bottomAnimation = useRef(new Animated.Value(0)).current;
 
+  // Custom scrollbar state
   const [scrollY, setScrollY] = useState(0);
   const [contentHeight, setContentHeight] = useState(1);
   const [containerHeight, setContainerHeight] = useState(1);
+  const [storeInfo, setStoreInfo] = useState<{
+    storeName: string;
+    storeType: string;
+    storeLocation: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const loadStoreMeta = async () => {
+      const meta = await AsyncStorage.getItem('storeMeta');
+      if (meta) {
+        const parsed = JSON.parse(meta);
+        setStoreInfo(parsed);
+      }
+    };
+    loadStoreMeta();
+  }, []);
 
   useEffect(() => {
     const loadAppFonts = async () => {
@@ -65,6 +83,7 @@ export default function ExistingInventoryScreen() {
     };
     loadAppFonts();
 
+    // Stagger entrance animations
     Animated.stagger(200, [
       Animated.timing(headerAnimation, {
         toValue: 1,
@@ -87,6 +106,23 @@ export default function ExistingInventoryScreen() {
     ]).start();
   }, []);
 
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      const loadedProducts = await getProducts();
+      const simplifiedProducts = loadedProducts.map(p => ({
+        id: p.id, 
+        name: p.name,
+        pcs: p.stock,
+        cost: p.cost,
+        price: p.price,
+        image: p.image,
+      }));
+      setProducts(simplifiedProducts);
+    };
+    loadProducts();
+  }, []);
+  
   const handleEdit = (product: Product) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
     setEditingProduct({
@@ -103,10 +139,11 @@ export default function ExistingInventoryScreen() {
   };
 
   const handleSave = (product: Product & { pcsStr: string; costStr: string; priceStr: string }) => {
-      if (!product.name.trim() || !product.pcsStr.trim() || !product.costStr.trim() || !product.priceStr.trim()) {
-      return; 
+    // Validate that all fields are filled
+    if (!product.name.trim() || !product.pcsStr.trim() || !product.costStr.trim() || !product.priceStr.trim()) {
+      return; // Don't save if any field is empty
     }
-
+    
     LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
     setProducts(products.map(p =>
       (p.id === product.id ? {
@@ -132,29 +169,57 @@ export default function ExistingInventoryScreen() {
       pcs: 0,
       cost: 0,
       price: 0,
-      image: require('../../../assets/png/fishball.png'),
+      image: require('../../assets/png/fishball.png'),
       pcsStr: '',
       costStr: '',
       priceStr: '',
     });
   };
 
-  const handleSaveNew = () => {
-    if (newProduct) {
-      if (!newProduct.name.trim() || !newProduct.pcsStr.trim() || !newProduct.costStr.trim() || !newProduct.priceStr.trim()) {
-        return; 
+  const handleSaveNew = async () => {
+    if (newProduct && storeInfo) {
+      if (
+        !newProduct.name.trim() ||
+        !newProduct.pcsStr.trim() ||
+        !newProduct.costStr.trim() ||
+        !newProduct.priceStr.trim()
+      ) {
+        return; // Don't save if any field is empty
       }
 
       LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+
+      const pcs = Number(newProduct.pcsStr) || 0;
+      const cost = Number(newProduct.costStr) || 0;
+      const price = Number(newProduct.priceStr) || 0;
+
+      // Add to local UI state
       setProducts([
         ...products,
         {
-          ...newProduct,
-          pcs: Number(newProduct.pcsStr) || 0,
-          cost: Number(newProduct.costStr) || 0,
-          price: Number(newProduct.priceStr) || 0,
+          id: newProduct.id,
+          name: newProduct.name,
+          pcs,
+          cost,
+          price,
+          image: newProduct.image,
         },
       ]);
+
+    // Send full product to inventory.ts
+      await addProduct({
+        id: newProduct.id,
+        name: newProduct.name,
+        cost,
+        price: price,
+        stock: pcs,
+        image: newProduct.image,
+        storeName: storeInfo.storeName,
+        storeType: storeInfo.storeType,
+        storeLocation: storeInfo.storeLocation,
+        logs: [],
+      });
+
       setNewProduct(null);
     }
   };
@@ -164,39 +229,39 @@ export default function ExistingInventoryScreen() {
     setNewProduct(null);
   };
 
-const isFieldEmpty = (value: string) => !value || !value.trim();
+  // Helper function to check if field is empty
+  const isFieldEmpty = (value: string) => !value || !value.trim();
 
+  // Helper function to get input style with red border if empty
   const getInputStyle = (value: string, baseStyle: any) => [
     baseStyle,
     isFieldEmpty(value) ? { borderColor: '#EF4444', borderWidth: 2 } : {}
   ];
 
+  // Calculate scrollbar height and position
   const scrollbarMargin = 20;
   const scrollbarHeight = 100;
   const maxScroll = contentHeight - containerHeight;
   let rawTop = maxScroll > 0 ? (scrollY / maxScroll) * (containerHeight - scrollbarHeight - 2 * scrollbarMargin) : 0;
   rawTop = Math.max(0, Math.min(rawTop, containerHeight - scrollbarHeight - 2 * scrollbarMargin));
   const scrollbarTop = scrollbarMargin + rawTop;
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerShown: false,
-    });
-  }, []);
-
 
   return (
     <View style={styles.container}>
-      <Animated.View style={{
-        opacity: headerAnimation,
-        transform: [{ translateY: headerAnimation.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }]
+      {/* Header */}
+      <Animated.View style={{ 
+        opacity: headerAnimation, 
+        transform: [{ translateY: headerAnimation.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] 
       }}>
+        {/* Removed back button */}
         <GradientText text="Let's set you up!" style={[styles.title, { paddingHorizontal: 20 }]} />
         <Text style={[styles.subheading, { fontFamily: getFontFamily('regular', fontsLoaded), paddingHorizontal: 20 }]}>Start by listing your existing products.</Text>
       </Animated.View>
 
-      <Animated.View style={[styles.blurBox, {
-        opacity: contentAnimation,
-        transform: [{ translateY: contentAnimation.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }]
+      {/* Content */}
+      <Animated.View style={[styles.blurBox, { 
+        opacity: contentAnimation, 
+        transform: [{ translateY: contentAnimation.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }] 
       }]}>
         <ScrollView
           style={styles.scrollArea}
@@ -208,10 +273,11 @@ const isFieldEmpty = (value: string) => !value || !value.trim();
         >
           {products.map((product) =>
             editingProduct && editingProduct.id === product.id ? (
+              // --- EDIT MODE CARD ---
               <View key={product.id} style={styles.productCard}>
                 <View style={styles.editTopRow}>
                   <View style={styles.editImageCircle}>
-                    <Image source={require('../../../assets/png/addimgbtn.png')} style={{ width: 21, height: 21, tintColor: 'black' }} />
+                    <Image source={require('../../assets/png/addimgbtn.png')} style={{ width: 21, height: 21, tintColor: 'black' }} />
                   </View>
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={styles.editLabel}>product name</Text>
@@ -267,7 +333,7 @@ const isFieldEmpty = (value: string) => !value || !value.trim();
                       setShowDeleteModal(true);
                     }}
                   >
-                    <Image source={require('../../../assets/png/deletebtn.png')} style={{ width: 32, height: 32 }} />
+                    <Image source={require('../../assets/png/deletebtn.png')} style={{ width: 32, height: 32 }} />
                   </TouchableOpacity>
                   <View style={{ flexDirection: 'row', flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
                     <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel}>
@@ -280,6 +346,7 @@ const isFieldEmpty = (value: string) => !value || !value.trim();
                 </View>
               </View>
             ) : (
+              // --- VIEW MODE CARD ---
               <View key={product.id} style={styles.productCard}>
                 <View style={styles.productRow}>
                   <View style={styles.productImageCircle} />
@@ -289,12 +356,12 @@ const isFieldEmpty = (value: string) => !value || !value.trim();
                   </View>
                   <View style={styles.productDetailsEditRow}>
                     <View style={styles.productDetailsStack}>
-                      <Text style={styles.productInfoGray}>cost: P{product.cost.toFixed(2)}</Text>
-                      <Text style={styles.productInfoGray}>total cost: P{(product.pcs * product.cost).toFixed(2)}</Text>
-                      <Text style={styles.productInfoGray}>price/pc: P{product.price.toFixed(2)}</Text>
+                      <Text style={styles.productInfoGray}>cost: P{product.cost}</Text>
+                      <Text style={styles.productInfoGray}>total cost: P{(product.pcs * product.cost)}</Text>
+                      <Text style={styles.productInfoGray}>price/pc: P{product.price}</Text>
                     </View>
                     <TouchableOpacity style={styles.editIconImg} onPress={() => handleEdit(product)}>
-                      <Image source={require('../../../assets/png/editbtn.png')} style={styles.editImg} />
+                      <Image source={require('../../assets/png/editbtn.png')} style={styles.editImg} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -305,7 +372,7 @@ const isFieldEmpty = (value: string) => !value || !value.trim();
             <View style={styles.productCard}>
               <View style={styles.editTopRow}>
                 <View style={styles.editImageCircle}>
-                  <Image source={require('../../../assets/png/addimgbtn.png')} style={{ width: 21, height: 21, tintColor: 'black' }} />
+                  <Image source={require('../../assets/png/addimgbtn.png')} style={{ width: 21, height: 21, tintColor: 'black' }} />
                 </View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={styles.editLabel}>product name</Text>
@@ -355,7 +422,7 @@ const isFieldEmpty = (value: string) => !value || !value.trim();
               </View>
               <View style={styles.editActionsRow}>
                 <TouchableOpacity style={[styles.deleteIcon, { backgroundColor: 'transparent', padding: 0 }]} onPress={handleCancelNew}>
-                  <Image source={require('../../../assets/png/deletebtn.png')} style={{ width: 32, height: 32 }} />
+                  <Image source={require('../../assets/png/deletebtn.png')} style={{ width: 32, height: 32 }} />
                 </TouchableOpacity>
                 <View style={{ flexDirection: 'row', flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
                   <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelNew}>
@@ -369,17 +436,19 @@ const isFieldEmpty = (value: string) => !value || !value.trim();
             </View>
           )}
         </ScrollView>
+        {/* Custom Scrollbar Overlay */}
         <View pointerEvents="none" style={[styles.scrollWheel, { height: scrollbarHeight, top: scrollbarTop }]}>
           <Image
-            source={require('../../../assets/png/scrollbar.png')}
+            source={require('../../assets/png/scrollbar.png')}
             style={{ width: '100%', height: '100%', resizeMode: 'stretch' }}
           />
         </View>
       </Animated.View>
 
-      <Animated.View style={{
-        opacity: bottomAnimation,
-        transform: [{ translateY: bottomAnimation.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }]
+      {/* Bottom row and confirm button remain unchanged */}
+      <Animated.View style={{ 
+        opacity: bottomAnimation, 
+        transform: [{ translateY: bottomAnimation.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }] 
       }}>
         <View style={styles.bottomRow}>
           <Text style={styles.capitalText}>Capital: P{capital.toLocaleString()}</Text>
@@ -392,12 +461,9 @@ const isFieldEmpty = (value: string) => !value || !value.trim();
             </TouchableOpacity>
           </View>
         </View>
-        <TouchableOpacity
+        <TouchableOpacity 
           style={[styles.confirmBtn, { marginHorizontal: 20 }]}
-          onPress={async () => {
-            await AsyncStorage.setItem('onboardingCompleted', 'true');
-            router.replace('/(app)/main');
-          }}
+          onPress={() => router.push('/main')}
         >
           <Text style={styles.confirmBtnText}>Confirm</Text>
         </TouchableOpacity>
@@ -828,4 +894,3 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-

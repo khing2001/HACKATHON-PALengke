@@ -1,39 +1,59 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, ScrollView, TouchableOpacity, StyleSheet, Text, Dimensions, Animated, Easing, Platform, BackHandler } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, ScrollView, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import EarningsCard from './EarningsCard';
 import StatCardsRow from './StatCardsRow';
 import TotalProfitCard from './TotalProfitCard';
 import { useRouter } from 'expo-router';
-import { getFontFamily } from '../../../components/FontConfig';
-
-const { width, height } = Dimensions.get('window');
+import { getFontFamily } from '../../components/FontConfig';
+import { calculateStats, getProfitPerDay } from '../../lib/inventory';
 
 interface AnalyticsProps {
   onBack?: () => void;
 }
 
 const BAR_DATA = [
-  { value: 80, color: '#4A154B' },
-  { value: 60, color: '#5A1F5B' },
-  { value: 40, color: '#6A2A6B' },
-  { value: 110, color: '#7A357B' },
-  { value: 70, color: '#8A408B' },
-  { value: 50, color: '#9A4B9B' },
-  { value: 35, color: '#AA56AB' },
+  { value: 80, color: '#6B026F' },
+  { value: 60, color: '#9920A6' },
+  { value: 40, color: '#BF5DC8' },
+  { value: 110, color: '#CA9ECF' },
+  { value: 70, color: '#BF6AC5' },
+  { value: 50, color: '#E397EA' },
+  { value: 35, color: '#77117B' },
 ];
 
-const TOTAL_SPENT = '-₱150.00';
-const PROFIT_TODAY = '+₱50.00';
-const PROFIT_WEEKLY = '+₱350.00';
-const TOTAL_PROFIT = '+₱200.00';
-const PROFIT_LABEL = '📈 Total Profit';
-const PROFIT_DATE = 'As of July 25, 2025';
-
 const Analytics: React.FC<AnalyticsProps> = ({ onBack }) => {
+  const [stats, setStats ] = useState({ totalProfit: 0, totalCapital: 0, totalSold: 0, profitToday: 0, profitWeekly: 0 });
+  const [graphData, setGraphData] = useState<{ value: number; color: string, label:string }[]>([]);
   const [profitTab, setProfitTab] = useState<'today' | 'weekly'>('today');
   const router = useRouter();
+
+  useEffect(() => {
+  const fetchStats = async () => {
+    const s = await calculateStats();
+    setStats(s);
+
+    const dailyProfits = await getProfitPerDay();
+    const gradientColors = ['#6B026F', '#9920A6', '#BF5DC8', '#CA9ECF', '#BF6AC5', '#E397EA', '#77117B'];
+
+    const bars = dailyProfits.map((dp, i) => ({
+      value: dp.profit,
+      color: gradientColors[i % gradientColors.length],
+      label: dp.label,
+    }));
+
+    setGraphData(bars);
+  };
+  fetchStats();
+
+}, []);
+
+  const TOTAL_SPENT = `+P${stats.totalCapital.toFixed(2)}`;
+  const PROFIT_TODAY = `+P${stats.profitToday.toFixed(2)}`;
+  const PROFIT_WEEKLY = `+P${stats.profitWeekly.toFixed(2)}`;
+  const TOTAL_PROFIT = `+P${stats.totalProfit.toFixed(2)}`;
+  const PROFIT_LABEL = '📈 Total Profit';
+  const PROFIT_DATE = 'As of July 15, 2025';
 
   const headerAnimation = useRef(new Animated.Value(0)).current;
   const titleAnimation = useRef(new Animated.Value(0)).current;
@@ -76,228 +96,87 @@ const Analytics: React.FC<AnalyticsProps> = ({ onBack }) => {
   }, [onBack]);
 
   return (
-    <View style={styles.container}>
-      <ScrollView 
-        style={styles.scrollContainer} 
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
-        {/* Header */}
-        <Animated.View 
-          style={[
-            styles.header,
-            {
-              opacity: headerAnimation,
-              transform: [
-                {
-                  translateY: headerAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-30, 0],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={onBack || (() => router.push('/shop'))}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="arrow-back" size={20} color="#64748B" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Analytics</Text>
-          <View style={styles.headerSpacer} />
-        </Animated.View>
-
-        {/* Earnings Card */}
-        <Animated.View 
-          style={[
-            styles.earningsCardWrapper,
-            {
-              opacity: earningsAnimation,
-              transform: [
-                {
-                  translateY: earningsAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [20, 0],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <EarningsCard bars={BAR_DATA} />
-        </Animated.View>
-
-        {/* Stats Cards */}
-        <Animated.View 
-          style={[
-            {
-              opacity: statsAnimation,
-              transform: [
-                {
-                  translateY: statsAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [20, 0],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <StatCardsRow
-            totalSpent={TOTAL_SPENT}
-            profitToday={PROFIT_TODAY}
-            profitWeekly={PROFIT_WEEKLY}
-            profitTab={profitTab}
-            onTabChange={setProfitTab}
-          />
-        </Animated.View>
-
-        {/* Total Profit Card */}
-        <Animated.View 
-          style={[
-            {
-              opacity: profitAnimation,
-              transform: [
-                {
-                  translateY: profitAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [20, 0],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <TotalProfitCard
-            label={PROFIT_LABEL}
-            date={PROFIT_DATE}
-            value={TOTAL_PROFIT}
-          />
-        </Animated.View>
-
-        {/* Download Button */}
-        <Animated.View 
-          style={[
-            {
-              opacity: downloadAnimation,
-              transform: [
-                {
-                  translateY: downloadAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [20, 0],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <TouchableOpacity 
-            style={styles.downloadButton} 
-            onPress={() => {/* TODO: implement download/report */}}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#4A154B', '#5A1F5B', '#6A2A6B']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.downloadButtonGradient}
-            >
-              <Ionicons name="download-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.downloadButtonText}>Download Report</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
-      </ScrollView>
-    </View>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <View style={styles.innerWrapper}>
+        <TouchableOpacity style={styles.backBtn} onPress={onBack || (() => router.push('/shop'))}>
+          <Ionicons name="arrow-back" size={28} color="#720877" />
+        </TouchableOpacity>
+        <Text style={styles.analyticsTitle}>Analytics</Text>
+        <View style={styles.earningsCardWrapper}>
+          <EarningsCard bars={graphData} />
+        </View>
+        <StatCardsRow
+          totalSpent={TOTAL_SPENT}
+          profitToday={PROFIT_TODAY}
+          profitWeekly={PROFIT_WEEKLY}
+          profitTab={profitTab}
+          onTabChange={setProfitTab}
+        />
+        <TotalProfitCard
+          label={PROFIT_LABEL}
+          date={PROFIT_DATE}
+          value={TOTAL_PROFIT}
+        />
+        <TouchableOpacity style={styles.downloadTab} onPress={() => {/* TODO: implement download/report */}}>
+          <Ionicons name="download-outline" size={18} color="#720877" style={{ marginRight: 6 }} />
+          <Text style={styles.downloadTabText}>Download Report</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  scrollContainer: {
-    flex: 1,
+    backgroundColor: '#fff',
   },
   contentContainer: {
-    paddingBottom: 40,
+    paddingBottom: 32,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
+  innerWrapper: {
+    marginTop: 24,
+    marginBottom: 8,
+    paddingHorizontal: 22,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: '#F1F5F9',
+  backBtn: {
+    marginTop: 40,
+    marginBottom: 10,
+    alignSelf: 'flex-start',
+    padding: 2,
   },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 22,
-    color: '#1E293B',
-    fontWeight: '600',
+  analyticsTitle: {
+    fontSize: 28,
+    color: '#720877',
+    fontWeight: 'bold',
     fontFamily: getFontFamily('bold', true),
-  },
-  headerSpacer: {
-    width: 40,
+    marginBottom: 10,
+    marginLeft: 2,
+    letterSpacing: 0.2,
   },
   earningsCardWrapper: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 8,
   },
-  downloadButton: {
-    alignSelf: 'center',
-    marginTop: 20,
-    marginHorizontal: width * 0.05,
-    borderRadius: 16,
-    shadowColor: '#4A154B',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  downloadButtonGradient: {
+  downloadTab: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 16,
-    minWidth: width * 0.5,
+    alignSelf: 'flex-start',
+    borderWidth: 1.2,
+    borderColor: '#720877',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginTop: 14,
+    marginLeft: 2,
+    backgroundColor: '#fff',
   },
-  downloadButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  downloadTabText: {
+    color: '#720877',
+    fontSize: 15,
+    fontWeight: 'bold',
     fontFamily: getFontFamily('bold', true),
-    letterSpacing: -0.2,
+    letterSpacing: 0.1,
   },
 });
 
-export default Analytics;
+export default Analytics; 
