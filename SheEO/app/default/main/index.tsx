@@ -11,23 +11,21 @@ import SharePage from "../share";
 import Resources from "../resources";
 import Analytics from "../shop/Analytics";
 import EditProducts from "../shop/EditProducts";
-import SideMenu from "../../../components/SideMenu"; // Added import for SideMenu
+import SideMenu from "../../../components/SideMenu";
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// Suppress the Expo Router Fragment warning
 LogBox.ignoreLogs(['Warning: Invalid prop `style` supplied to `React.Fragment`']);
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('home');
-  const [currentScreen, setCurrentScreen] = useState('main'); // 'main' or 'share' or 'resources' or 'analytics' or 'editProducts'
+  const [currentScreen, setCurrentScreen] = useState('main'); 
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [fontLoadingComplete, setFontLoadingComplete] = useState(false);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [modalAnimation] = useState(new Animated.Value(0));
   
-  // Sample products data to check for out-of-stock items
   const [products] = useState([
     { id: '1', name: 'tempura', price: 10.0, stock: 0, hasImage: true },
     { id: '2', name: 'fishballs', price: 10.0, stock: 0, hasImage: true },
@@ -55,10 +53,8 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    // Handle Android back button
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
       if (currentScreen === 'main') {
-        // Show exit confirmation modal
         setShowExitModal(true);
         Animated.timing(modalAnimation, {
           toValue: 1,
@@ -66,9 +62,9 @@ const App = () => {
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }).start();
-        return true; // Prevent default behavior
+        return true; 
       }
-      return false; // Allow default behavior for other screens
+      return false; 
     });
 
     return () => backHandler.remove();
@@ -102,7 +98,7 @@ const App = () => {
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab);
-    setCurrentScreen('main'); // Always go back to main screen when tab is pressed
+    setCurrentScreen('main'); 
   };
 
   const navigateToShare = () => {
@@ -149,7 +145,7 @@ const App = () => {
       onNavigateToResources: navigateToResources,
       onNavigateToAnalytics: navigateToAnalytics,
       onNavigateToEditProducts: navigateToEditProducts,
-      toggleMenu: toggleMenu, // Pass toggleMenu function
+      toggleMenu: toggleMenu, 
     };
 
     switch (activeTab) {
@@ -308,7 +304,7 @@ const styles = StyleSheet.create({
     color: '#333',
     fontFamily: getFontFamily('regular', false),
   },
-  // Exit Modal Styles
+
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
